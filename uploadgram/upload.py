@@ -173,7 +173,8 @@ async def upload_as_video(
     pbar: tqdm,
 ):
     try:
-        metadata = extractMetadata(createParser(file_path))
+        parser = createParser(file_path)
+        metadata = extractMetadata(parser) if parser else None
         duration = 0
         width = 0
         height = 0
@@ -184,7 +185,7 @@ async def upload_as_video(
             os.path.dirname(os.path.abspath(file_path)),
             (duration / 2),
         )
-    except AssertionError:
+    except (AssertionError, AttributeError, TypeError):
         return await upload_as_document(
             usr_sent_message,
             bot_sent_message,
@@ -194,14 +195,18 @@ async def upload_as_video(
             start_time,
             pbar,
         )
-    try:
-        metadata = extractMetadata(createParser(thumb_nail_img))
-        if metadata and metadata.has("width"):
-            width = metadata.get("width")
-        if metadata and metadata.has("height"):
-            height = metadata.get("height")
-    except AssertionError:
-        pass
+    if thumb_nail_img and os.path.exists(thumb_nail_img):
+        try:
+            parser = createParser(thumb_nail_img)
+            metadata = extractMetadata(parser) if parser else None
+            if metadata and metadata.has("width"):
+                width = metadata.get("width")
+            if metadata and metadata.has("height"):
+                height = metadata.get("height")
+        except (AssertionError, AttributeError, TypeError):
+            pass
+    else:
+        thumb_nail_img = None
     _tmp_m = await usr_sent_message.reply_video(
         video=file_path,
         quote=True,
@@ -233,7 +238,11 @@ async def upload_as_audio(
     start_time: int,
     pbar: tqdm,
 ):
-    metadata = extractMetadata(createParser(file_path))
+    try:
+        parser = createParser(file_path)
+        metadata = extractMetadata(parser) if parser else None
+    except (AssertionError, AttributeError, TypeError, ValueError):
+        metadata = None
     duration = 0
     title = None
     performer = None
