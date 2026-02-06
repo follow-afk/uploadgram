@@ -238,8 +238,11 @@ async def upload_as_audio(
     start_time: int,
     pbar: tqdm,
 ):
-    parser = createParser(file_path)
-    metadata = extractMetadata(parser) if parser else None
+    try:
+        parser = createParser(file_path)
+        metadata = extractMetadata(parser) if parser else None
+    except (AssertionError, AttributeError, TypeError, ValueError):
+        metadata = None
     duration = 0
     title = None
     performer = None
