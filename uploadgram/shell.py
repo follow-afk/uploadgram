@@ -14,13 +14,15 @@
 
 
 import os
+import asyncio
+import argparse
 from typing import Union
 from .uploadgram import Uploadgram
 from .upload import upload_dir_contents
 
 
 async def upload(
-    uploadgram: Uploadgram,
+    client: Uploadgram,
     files: str,
     to: Union[str, int],
     delete_on_success: bool = False,
@@ -30,15 +32,15 @@ async def upload(
     console_progress: bool = False,
     message_thread_id: int = None,
 ):
-    # sent a message to verify write permission in the "to"
-    status_message = await uploadgram.send_message(
+    # send a message to verify write permission and act as status indicator
+    status_message = await client.send_message(
         chat_id=to,
-        text=".",
+        text="`Initializing upload...`",
         message_thread_id=message_thread_id
     )
 
-    # get the max tg file_size that is allowed for this account
-    tg_max_file_size = 4194304000 if uploadgram.me.is_premium else 2097152000
+    # Max file size: 4GB for premium, 2GB for others
+    tg_max_file_size = 4194304000 if client.me.is_premium else 2097152000
 
     await upload_dir_contents(
         tg_max_file_size,
@@ -51,124 +53,108 @@ async def upload(
         console_progress
     )
     
-    await status_message.delete()
+    try:
+        await status_message.delete()
+    except Exception:
+        pass
 
 
-async def moin(
-    args
-):
-    uploadgram = Uploadgram()
-    await uploadgram.start()
+async def moin(args):
+    client = Uploadgram()
+    await client.start()
 
-    dest_chat = args.chat_id
-    if not dest_chat:
-        dest_chat = input(
-            "enter chat_id to send the files to: "
+    try:
+        dest_chat = args.chat_id
+        if not dest_chat:
+            dest_chat = input("Enter chat_id to send the files to: ")
+        
+        if dest_chat.isnumeric() or dest_chat.startswith("-100"):
+            dest_chat = int(dest_chat)
+        
+        # Validate chat
+        chat = await client.get_chat(dest_chat)
+        dest_chat = chat.id
+
+        dir_path = args.dir_path
+        if not dir_path:
+            dir_path = input("Enter path to upload to Telegram: ")
+        
+        while not os.path.exists(dir_path):
+            print(f"Path does not exist. Current directory contents: {os.listdir('.')}")
+            dir_path = input("Please enter valid path to upload: ")
+        
+        dir_path = os.path.abspath(dir_path)
+
+        await upload(
+            client,
+            dir_path,
+            dest_chat,
+            delete_on_success=args.delete_on_success,
+            thumbnail_file=args.t,
+            force_document=args.fd,
+            custom_caption=args.caption,
+            console_progress=args.progress,
+            message_thread_id=args.topic
         )
-    if (
-        dest_chat.isnumeric() or
-        dest_chat.startswith("-100")
-    ):
-        dest_chat = int(dest_chat)
-    dest_chat = (
-        await uploadgram.get_chat(dest_chat, False)
-    ).id
-
-    dir_path = args.dir_path
-    if not dir_path:
-        dir_path = input(
-            "enter path to upload to Telegram: "
-        )
-    while not os.path.exists(dir_path):
-        print(os.listdir("."))
-        dir_path = input(
-            "please enter valid path to upload to Telegram: "
-        )
-    dir_path = os.path.abspath(dir_path)
-
-    await upload(
-        uploadgram,
-        dir_path,
-        dest_chat,
-        delete_on_success=args.delete_on_success,
-        thumbnail_file=args.t,
-        force_document=args.fd,
-        custom_caption=args.caption,
-        console_progress=args.progress,
-        message_thread_id=args.topic
-    )
-    await uploadgram.stop()
+    finally:
+        await client.stop()
 
 
 def main():
-    import asyncio
-    import argparse
     parser = argparse.ArgumentParser(
         prog="UploadGram",
-        description="Upload to Telegram, from the Terminal."
+        description="Upload to Telegram from the Terminal (Optimized)"
     )
     parser.add_argument(
         "chat_id",
         type=str,
-        help="chat id for this bot to send the message to",
+        help="Target chat ID or username",
     )
     parser.add_argument(
         "dir_path",
         type=str,
-        help="enter path to upload to Telegram",
+        help="Path to file or directory to upload",
     )
     parser.add_argument(
         "--delete_on_success",
-        nargs="?",
-        type=bool,
-        help="delete file on successful upload",
-        default=False,
-        required=False
+        action="store_true",
+        help="Delete file after successful upload",
     )
     parser.add_argument(
         "--fd",
-        nargs="?",
-        type=bool,
-        help="force uploading as documents",
-        default=False,
-        required=False
+        action="store_true",
+        help="Force uploading as documents",
     )
     parser.add_argument(
         "--t",
-        nargs="?",
         type=str,
-        help="thumbnail for the upload",
+        help="Path to custom thumbnail",
         default=None,
-        required=False
     )
     parser.add_argument(
         "--caption",
-        nargs="?",
         type=str,
-        help="custom caption for the files, instead of file_name as caption",
+        help="Custom caption for the files",
         default=None,
-        required=False
     )
     parser.add_argument(
         "--progress",
-        nargs="?",
-        type=bool,
-        const=True,
-        help="show upload progress in terminal",
-        default=False,
-        required=False
+        action="store_true",
+        help="Show upload progress in terminal",
     )
     parser.add_argument(
         "--topic",
-        nargs="?",
         type=int,
-        help="Unique identifier of the forum topic. This is a temporary type for uploading messages into a specific topic in a chat.",
+        help="Forum topic ID",
         default=None,
-        required=False
     )
+    
     args = parser.parse_args()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(moin(args))
+    
+    try:
+        asyncio.run(moin(args))
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":

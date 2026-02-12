@@ -19,17 +19,20 @@ from .get_config import get_config
 
 
 class Uploadgram(Client):
-    """ modded client """
+    """ modded client optimized for speed """
 
     def __init__(self):
+        # Optimized for high-speed uploads
+        # max_concurrent_transmissions is increased to 10 for better throughput
+        # workers is set to 24 for better task handling
         super().__init__(
             name="UploadGram",
             api_id=int(get_config("UG_TG_APP_ID")),
             api_hash=get_config("UG_TG_API_HASH"),
             parse_mode=ParseMode.HTML,
-            sleep_threshold=int(get_config("UG_TG_ST", 10)),
-            workers=int(get_config("UG_TG_WS", 10)),
-            max_concurrent_transmissions=int(get_config("UG_TG_MCTS", 4)),
+            sleep_threshold=int(get_config("UG_TG_ST", 60)),
+            workers=int(get_config("UG_TG_WS", 24)),
+            max_concurrent_transmissions=int(get_config("UG_TG_MCTS", 10)),
             no_updates=True,
             device_model="Samsung SM-G998B",
             app_version="10.11.2 (4665)",
@@ -45,10 +48,10 @@ class Uploadgram(Client):
     async def start(self):
         await super().start()
         print(
-            f"{self.me} based on Pyrogram v{__version__} started."
+            f"{self.me.first_name} based on Pyrogram v{__version__} started."
         )
 
     async def stop(self, *args):
         usr_bot_me = self.me
         await super().stop()
-        print(f"{usr_bot_me} stopped. Bye.")
+        print(f"{usr_bot_me.first_name} stopped. Bye.")

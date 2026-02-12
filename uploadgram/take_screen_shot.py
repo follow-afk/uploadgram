@@ -14,38 +14,41 @@
 
 
 import os
-from time import time
-from .config import (
-    TG_VIDEO_TYPES
-)
+import time
+from .config import TG_VIDEO_TYPES
 from .run_shell_command import run_command
 
 
 async def take_screen_shot(
     video_file: str,
     output_directory: str,
-    ttl: int
+    timestamp: float
 ):
-    # https://stackoverflow.com/a/13891070/4723940
-    out_put_file_name = os.path.join(
+    """Generates a thumbnail from a video file at a specific timestamp."""
+    
+    # Use a unique filename to avoid collisions
+    output_file_name = os.path.join(
         output_directory,
-        str(time()) + ".jpg"
+        f"thumb_{int(time.time())}.jpg"
     )
-    if video_file.upper().endswith(TG_VIDEO_TYPES):
-        file_genertor_command = [
+    
+    file_ext = video_file.split('.')[-1].upper() if '.' in video_file else ""
+    
+    if file_ext in TG_VIDEO_TYPES:
+        # Optimization: -ss before -i is much faster as it uses seek
+        ffmpeg_command = [
             "ffmpeg",
             "-hide_banner",
-            "-ss",
-            str(ttl),
-            "-i",
-            video_file,
-            "-vframes",
-            "1",
-            out_put_file_name
+            "-loglevel", "error",
+            "-ss", str(timestamp),
+            "-i", video_file,
+            "-vframes", "1",
+            "-q:v", "2",  # High quality
+            output_file_name
         ]
-        # width = "90"
-        await run_command(file_genertor_command)
-    if os.path.lexists(out_put_file_name):
-        return out_put_file_name
-    else:
-        return None
+        
+        await run_command(ffmpeg_command)
+        
+    if os.path.exists(output_file_name):
+        return output_file_name
+    return None
