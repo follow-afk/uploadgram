@@ -13,23 +13,21 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from pyrogram import Client, __version__
-from pyrogram.enums import ParseMode, ClientPlatform
+from pyrogram import Client, __version__, enums
 from .get_config import get_config
 
 
 class Uploadgram(Client):
-    """ modded client optimized for speed """
+    """ modded client optimized for speed and compatibility with Pyrogram v2.x """
 
     def __init__(self):
-        # Optimized for high-speed uploads
-        # max_concurrent_transmissions is increased to 10 for better throughput
-        # workers is set to 24 for better task handling
+        # Optimized for high-speed uploads in Pyrogram v2.x
+        # Parameters updated for compatibility with latest Pyrogram
         super().__init__(
             name="UploadGram",
             api_id=int(get_config("UG_TG_APP_ID")),
             api_hash=get_config("UG_TG_API_HASH"),
-            parse_mode=ParseMode.HTML,
+            parse_mode=enums.ParseMode.HTML,
             sleep_threshold=int(get_config("UG_TG_ST", 60)),
             workers=int(get_config("UG_TG_WS", 24)),
             max_concurrent_transmissions=int(get_config("UG_TG_MCTS", 10)),
@@ -37,12 +35,7 @@ class Uploadgram(Client):
             device_model="Samsung SM-G998B",
             app_version="10.11.2 (4665)",
             system_version="SDK 31",
-            lang_pack="",
-            lang_code="en",
-            system_lang_code="en",
-            max_message_cache_size=int(get_config("UG_TG_MMC", 0)),
-            max_business_user_connection_cache_size=int(get_config("UG_TG_MBUC", 0)),
-            client_platform=ClientPlatform.ANDROID
+            lang_code="en"
         )
 
     async def start(self):

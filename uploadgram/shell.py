@@ -40,7 +40,9 @@ async def upload(
     )
 
     # Max file size: 4GB for premium, 2GB for others
-    tg_max_file_size = 4194304000 if client.me.is_premium else 2097152000
+    # Check if client.me exists (it should after start())
+    is_premium = getattr(client.me, "is_premium", False)
+    tg_max_file_size = 4194304000 if is_premium else 2097152000
 
     await upload_dir_contents(
         tg_max_file_size,
@@ -103,7 +105,7 @@ async def moin(args):
 def main():
     parser = argparse.ArgumentParser(
         prog="UploadGram",
-        description="Upload to Telegram from the Terminal (Optimized)"
+        description="Upload to Telegram from the Terminal (Optimized for v2.x)"
     )
     parser.add_argument(
         "chat_id",
@@ -155,6 +157,8 @@ def main():
         asyncio.run(moin(args))
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
